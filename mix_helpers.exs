@@ -6,6 +6,7 @@ defmodule Mix.Appsignal.Helper do
   """
   @os Application.get_env(:appsignal, :os, :os)
   @system Application.get_env(:appsignal, :mix_system, System)
+  @mirror_url Application.get_env(:appsignal, :config, [])[:mirror_url]
 
   @max_retries 5
 
@@ -123,7 +124,16 @@ defmodule Mix.Appsignal.Helper do
     version = Appsignal.Agent.version()
     File.mkdir_p!(priv_dir())
     clean_up_extension_files()
-    url = arch_config[:download_url]
+
+    download_url =
+      case is_nil(@mirror_url) do
+        true ->
+          Appsignal.Agent.download_url
+        _ ->
+          @mirror_url
+      end
+
+    url = [download_url, Appsignal.Agent.version, arch_config[:filename]] |> Enum.join("/")
     report = merge_report(report, %{download: %{download_url: url}})
 
     filename = Path.join(tmp_dir(), "appsignal-agent-#{version}.tar.gz")
